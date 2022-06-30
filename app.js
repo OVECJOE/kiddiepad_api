@@ -266,37 +266,75 @@ app.post('/api/chapters/create_new', (req, res) => {
                 res.status(404).send(
                     { error: 'chapter body must be provided.' }
                 );
+            } else {
+                Chapter.create({
+                    ...req.body,
+                    number: book.chapters.length + 1,
+                    noOfPages: Math.ceil(req.body.body.length / 500)
+                }, (err, newChapter) => {
+                    if (err) {
+                        res.status(500).send(
+                            {
+                                error: `Could not save new chapter; Check that chapter
+                             title or body is not duplicated.` }
+                        );
+                    } else {
+                        Book.updateOne({ _id: req.body.bookId },
+                            {
+                                noOfChapters: book.chapters.length + 1,
+                                $addToSet: { chapters: newChapter._id }
+                            },
+                            (err) => {
+                                if (err) {
+                                    res.status(500).send(
+                                        { error: 'Could not update book with new chapter.' }
+                                    );
+                                } else {
+                                    res.send(newChapter);
+                                }
+                            }
+                        );
+                    }
+                });
             }
-            Chapter.create({
-                ...req.body,
-                number: book.chapters.length + 1,
-                noOfPages: Math.ceil(req.body.body.length / 500)
-            }, (err, newChapter) => {
-                if (err) {
-                    // res.status(500).send(
-                    //     {
-                    //         error: `Could not save new chapter; Check that chapter
-                    //      title or body is not duplicated.` }
-                    // );
-                    console.log(err);
-                } else {
-                    Book.updateOne({ _id: req.body.bookId },
-                        {
-                            noOfChapters: book.chapters.length + 1,
-                            $addToSet: { chapters: newChapter._id }
-                        },
-                        (err) => {
+        }
+    });
+});
+
+app.delete('/api/chapters/delete/:chapterId', (req, res) => {
+    const chapterId = req.params.chapterId;
+
+    Chapter.findOneAndDelete({ _id: chapterId }, (err, chapter) => {
+        if (err) {
+            res.status(500).send(
+                { error: 'Could not delete chapter; Check that chapter id is valid.' }
+            );
+        } else {
+            if (!chapter || !chapter.bookId) {
+                res.status(404).send(
+                    { error: 'Chapter with given id does not exists.' }
+                );
+            } else {
+                Book.findOne({ _id: chapter.bookId }, (err, book) => {
+                    if (err) {
+                        res.status(404).send(
+                            { error: 'Could not find book with such chapter.' }
+                        );
+                    } else {
+                        const chapters = book.chapters.filter(chapter => chapter._id != chapterId);
+                        book.chapters = chapters;
+                        book.save((err, book) => {
                             if (err) {
                                 res.status(500).send(
-                                    { error: 'Could not update book with new chapter.' }
+                                    { error: 'Could save changes made to the book.' }
                                 );
                             } else {
-                                res.send(newChapter);
+                                res.send(book);
                             }
-                        }
-                    );
-                }
-            });
+                        });
+                    }
+                });
+            }
         }
     });
 });
