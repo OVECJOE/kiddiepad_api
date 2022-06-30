@@ -4,7 +4,12 @@ const { ObjectId } = Schema.Types;
 
 const review = new Schema({
     userId: { type: ObjectId, ref: 'User' },
-    ratingScore: { type: Number, min: 0, max: 5, required: true },
+    ratingScore: {
+        type: Number,
+        min: 0, max: 5,
+        required: true,
+        sparse: true
+    },
     comment: { type: String, maxlength: 500, trim: true },
     bookId: { type: ObjectId, ref: 'Book' },
     votes: { type: Number, default: 0 },

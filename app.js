@@ -111,7 +111,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // become writer endpoint
-app.post('/api/register/writer', async (req, res) => {
+app.post('/api/register/new_writer', async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
 
@@ -227,7 +227,7 @@ app.get('/api/books/:title', (req, res) => {
 });
 
 // get books by keyword
-app.get('/api/books/search/:keyword', (req, res) => {
+app.get('/api/books/:keyword/search', (req, res) => {
     const { keyword } = req.params;
 
     if (!keyword) {
@@ -259,53 +259,113 @@ app.get('/api/books/search/:keyword', (req, res) => {
 });
 
 // delete a book by ID
-app.delete('/api/books/delete/:bookId', (req, res) => {
+app.delete('/api/books/:bookId/delete', (req, res) => {
     const bookId = req.params.bookId;
 
-    Book.findOneAndDelete({ _id: bookId }, (err, book) => {
+    Book.findOne({ _id: bookId }, (err, book) => {
         if (err) {
             res.status(404).send(
-                {error: 'Could not find book with given id.'}
+                { error: 'Could not find book with given id.' }
             );
         } else {
             if (!book || !book.authorId) {
                 res.status(404).send(
-                    {error: 'Book with given id does not exist.'}
+                    { error: 'Book with given id does not exist.' }
                 );
             } else {
-                book.published ? res.status(400).send(
-                    {error: 'A published book cannot be deleted.'}
-                ) :
-                User.findOne({ _id: book.authorId }, (err, user) => {
-                    if (err) {
-                        res.status(404).send(
-                            {error: 'Changes could not be made to user at the moment.'}
-                        );
-                    } else {
-                        const books = user.books.filter(book => book._id != bookId);
-                        user.books = books;
-                        user.save((err, user) => {
-                            if (err) {
-                                res.status(500).send(
-                                    {error: 'Could not save changes to user at the moment.'}
-                                );
-                            } else {
-                                Chapter.deleteMany({ bookId: bookId }, (err) => {
-                                    if (err) {
-                                        res.status(500).send(
-                                            {error: 'Could not delete chapters associated with book.'}
-                                        );
-                                    } else {
-                                        res.send(user);
-                                    }
-                                })
-                            }
-                        });
-                    }
-                });
+                book.published ?
+                    res.status(400).send(
+                        { error: 'A published book cannot be deleted.' }
+                    ) :
+                    User.findOne({ _id: book.authorId }, (err, user) => {
+                        if (err) {
+                            res.status(404).send(
+                                { error: 'Changes could not be made to user at the moment.' }
+                            );
+                        } else {
+                            const books = user.books.filter(book => book._id != bookId);
+                            user.books = books;
+                            user.save((err, user) => {
+                                if (err) {
+                                    res.status(500).send(
+                                        { error: 'Could not save changes to user at the moment.' }
+                                    );
+                                } else {
+                                    Chapter.deleteMany({ bookId: bookId }, (err) => {
+                                        if (err) {
+                                            res.status(500).send(
+                                                { error: 'Could not delete chapters associated with book.' }
+                                            );
+                                        } else {
+                                            book.deleteOne({}, (err) => {
+                                                if (err) {
+                                                    res.status(500).send(
+                                                        { error: 'Could not delete book at the moment, try again.' }
+                                                    );
+                                                } else {
+                                                    res.send(user);
+                                                }
+                                            });
+                                        }
+                                    })
+                                }
+                            });
+                        }
+                    });
             }
         }
     });
+});
+
+// publish a book
+app.put('/api/books/:bookId/publish', (req, res) => {
+    const bookId = req.params.bookId;
+
+    Book.findOne({ _id: bookId }, (err, book) => {
+        if (err) {
+            res.status(500).send(
+                { error: 'Book with given id not found.' }
+            );
+        } else {
+            book.published = true;
+            book.save((err, updatedBook) => {
+                if (err) {
+                    res.status(500).send(
+                        { error: 'Could not save requested changes on book.' }
+                    );
+                } else {
+                    res.send(updatedBook);
+                }
+            });
+        }
+    });
+});
+
+// read a published book
+app.get('/api/books/:bookId/read', (req, res) => {
+    const bookId = req.params.bookId;
+
+    Book.findOne({ _id: bookId })
+        .populate({ path: 'chapters', model: 'Chapter' })
+        .populate('authorId', 'username')
+        .exec((err, book) => {
+            if (err) {
+                res.status(500).send(
+                    { error: 'Could not get book info at the moment; Try again.' }
+                );
+            } else {
+                book.published ?
+                res.send({
+                    noOfChapters: book.noOfChapters,
+                    chapters: book.chapters,
+                    title: book.title,
+                    author: book.authorId.username
+                }) :
+                res.status(400).send(
+                    {error: 'This book has not been published, hence cannot be read.'}
+                );
+            }
+        });
 });
 
 // create new chapter
@@ -322,7 +382,7 @@ app.post('/api/chapters/create_new', (req, res) => {
                 );
             } else if (!book) {
                 res.status(404).send(
-                    {error: 'Book not found.'}
+                    { error: 'Book not found.' }
                 );
             } else {
                 Chapter.create({
@@ -360,7 +420,7 @@ app.post('/api/chapters/create_new', (req, res) => {
 });
 
 // delete a given chapter using the chapter id
-app.delete('/api/chapters/delete/:chapterId', (req, res) => {
+app.delete('/api/chapters/:chapterId/delete', (req, res) => {
     const chapterId = req.params.chapterId;
 
     Chapter.findOneAndDelete({ _id: chapterId }, (err, chapter) => {
@@ -394,6 +454,95 @@ app.delete('/api/chapters/delete/:chapterId', (req, res) => {
                     }
                 });
             }
+        }
+    });
+});
+
+// update a chapter's content
+app.put('/api/chapters/:chapterId/update', (req, res) => {
+    const { chapterId } = req.params;
+    const { content } = req.body;
+
+    if (!content) {
+        res.status(400).send(
+            {error: 'content to update chapter is needed.'}
+        );
+    } else {
+        Chapter.findOne({ _id: chapterId }, (err, chapter) => {
+            if (err) {
+                res.status(400).send(
+                    {error: 'Could not update chapter with new content.'}
+                );
+            } else {
+                if (chapter.body === content) {
+                    res.status(400).send(
+                        {error: 'content is the same as the chapter body.'}
+                    );
+                } else {
+                    chapter.body = content;
+                    chapter.noOfPages = Math.ceil(content.length / 500);
+                    chapter.save((err, updatedChapter) => {
+                        if (err) {
+                            res.status(500).send(
+                                {error: `Could not save changes on chapter ${chapter.number}.`}
+                            );
+                        } else {
+                            res.send(updatedChapter);
+                        }
+                    });
+                }
+            }
+        });
+    }
+});
+
+// review a book
+app.post('/api/reviews/create_new', (req, res) => {
+    const { userId, bookId, rating, comment } = req.body;
+    
+    User.findOne({ _id: userId }, (err, user) => {
+        if (err) {
+            res.status(404).send(
+                {error: 'Could not find user with given id.'}
+            );
+        } else {
+            Book.findOne({ _id: bookId }, (err, book) => {
+                if (err) {
+                    res.status(404).send(
+                        {error: 'Could not find book with given id.'}
+                    );
+                } else {
+                    if (!rating && !comment) {
+                        res.status(400).send(
+                            {error: 'rating or comment is needed.'}
+                        );
+                    } else {
+                        Review.create({
+                            userId: user._id,
+                            bookId: book._id,
+                            ratingScore: rating,
+                            comment
+                        }, (err, newReview) => {
+                            if (err) {
+                                res.status(500).send(
+                                    {error: 'Could not create new review at the moment, try again.'}
+                                );
+                            } else {
+                                book.reviews.push(newReview._id);
+                                book.save((err) => {
+                                    if (err) {
+                                        res.status(500).send(
+                                            {error: 'Could not update book with changes'}
+                                        );
+                                    } else {
+                                        res.send(newReview);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            });
         }
     });
 });
