@@ -153,6 +153,7 @@ app.post('/api/register/writer', async (req, res) => {
     }
 });
 
+// create new book
 app.post('/api/books/create_new', (req, res) => {
     const { title, category, desc, audience, authorId } = req.body;
 
@@ -207,6 +208,7 @@ app.post('/api/books/create_new', (req, res) => {
     });
 });
 
+// get book by title
 app.get('/api/books/:title', (req, res) => {
     const bookTitle = req.params.title;
 
@@ -224,6 +226,7 @@ app.get('/api/books/:title', (req, res) => {
         });
 });
 
+// get books by keyword
 app.get('/api/books/search/:keyword', (req, res) => {
     const { keyword } = req.params;
 
@@ -255,6 +258,7 @@ app.get('/api/books/search/:keyword', (req, res) => {
     }
 });
 
+// delete a book by ID
 app.delete('/api/books/delete/:bookId', (req, res) => {
     const bookId = req.params.bookId;
 
@@ -264,29 +268,47 @@ app.delete('/api/books/delete/:bookId', (req, res) => {
                 {error: 'Could not find book with given id.'}
             );
         } else {
-            User.findOne({ _id: book.authorId }, (err, user) => {
-                if (err) {
-                    res.status(404).send(
-                        {error: 'Changes could not be made to user at the moment.'}
-                    );
-                } else {
-                    const books = user.books.filter(book => book._id != bookId);
-                    user.books = books;
-                    user.save((err, user) => {
-                        if (err) {
-                            res.status(500).send(
-                                {error: 'Could not save changes to user at the moment.'}
-                            );
-                        } else {
-                            res.send(user);
-                        }
-                    });
-                }
-            });
+            if (!book || !book.authorId) {
+                res.status(404).send(
+                    {error: 'Book with given id does not exist.'}
+                );
+            } else {
+                book.published ? res.status(400).send(
+                    {error: 'A published book cannot be deleted.'}
+                ) :
+                User.findOne({ _id: book.authorId }, (err, user) => {
+                    if (err) {
+                        res.status(404).send(
+                            {error: 'Changes could not be made to user at the moment.'}
+                        );
+                    } else {
+                        const books = user.books.filter(book => book._id != bookId);
+                        user.books = books;
+                        user.save((err, user) => {
+                            if (err) {
+                                res.status(500).send(
+                                    {error: 'Could not save changes to user at the moment.'}
+                                );
+                            } else {
+                                Chapter.deleteMany({ bookId: bookId }, (err) => {
+                                    if (err) {
+                                        res.status(500).send(
+                                            {error: 'Could not delete chapters associated with book.'}
+                                        );
+                                    } else {
+                                        res.send(user);
+                                    }
+                                })
+                            }
+                        });
+                    }
+                });
+            }
         }
     });
 });
 
+// create new chapter
 app.post('/api/chapters/create_new', (req, res) => {
     Book.findOne({ _id: req.body.bookId }, (err, book) => {
         if (err) {
@@ -297,6 +319,10 @@ app.post('/api/chapters/create_new', (req, res) => {
             if (!req.body.body) {
                 res.status(404).send(
                     { error: 'chapter body must be provided.' }
+                );
+            } else if (!book) {
+                res.status(404).send(
+                    {error: 'Book not found.'}
                 );
             } else {
                 Chapter.create({
@@ -333,6 +359,7 @@ app.post('/api/chapters/create_new', (req, res) => {
     });
 });
 
+// delete a given chapter using the chapter id
 app.delete('/api/chapters/delete/:chapterId', (req, res) => {
     const chapterId = req.params.chapterId;
 
@@ -371,6 +398,7 @@ app.delete('/api/chapters/delete/:chapterId', (req, res) => {
     });
 });
 
+// for non-available endpoints or routes
 app.use('*', (req, res) => {
     res.status(404).send({
         error: 'You reached a route that is not defined on the server',
