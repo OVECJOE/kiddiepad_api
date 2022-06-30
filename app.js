@@ -255,6 +255,38 @@ app.get('/api/books/search/:keyword', (req, res) => {
     }
 });
 
+app.delete('/api/books/delete/:bookId', (req, res) => {
+    const bookId = req.params.bookId;
+
+    Book.findOneAndDelete({ _id: bookId }, (err, book) => {
+        if (err) {
+            res.status(404).send(
+                {error: 'Could not find book with given id.'}
+            );
+        } else {
+            User.findOne({ _id: book.authorId }, (err, user) => {
+                if (err) {
+                    res.status(404).send(
+                        {error: 'Changes could not be made to user at the moment.'}
+                    );
+                } else {
+                    const books = user.books.filter(book => book._id != bookId);
+                    user.books = books;
+                    user.save((err, user) => {
+                        if (err) {
+                            res.status(500).send(
+                                {error: 'Could not save changes to user at the moment.'}
+                            );
+                        } else {
+                            res.send(user);
+                        }
+                    });
+                }
+            });
+        }
+    });
+});
+
 app.post('/api/chapters/create_new', (req, res) => {
     Book.findOne({ _id: req.body.bookId }, (err, book) => {
         if (err) {
