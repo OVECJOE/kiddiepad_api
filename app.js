@@ -597,6 +597,41 @@ app.put('/api/users/:userId/follow/:writerId', (req, res) => {
     });
 });
 
+// delete user endpoint (note that you cannot delete writers)
+app.delete('/api/users/:userId/delete', (req, res) => {
+    const { userId } = req.params;
+
+    User.findOne({ _id: userId }, (err, user) => {
+        if (err) {
+            res.status(404).send(
+                {error: 'User with given id not found.'}
+            );
+        } else {
+            if (!user) {
+                res.status(404).send(
+                    {error: 'User with given id not found.'}
+                );
+            } else {
+                if (user.isWriter) {
+                    res.status(400).send(
+                        {error: 'Could delete a writer.'}
+                    );
+                } else {
+                    User.deleteOne({ _id: userId }, (err) => {
+                        if (err) {
+                            res.status(500).send(
+                                {error: 'Could not delete user at the moment.'}
+                            );
+                        } else {
+                            res.send(user);
+                        }
+                    });
+                }
+            }
+        }
+    });
+});
+
 // for non-available endpoints or routes
 app.use('*', (req, res) => {
     res.status(404).send({
