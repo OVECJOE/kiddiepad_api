@@ -21,13 +21,15 @@ const user = new Schema({
     },
     birthDate: { type: Date, required: true },
     password: { type: String, required: true, trim: true },
-    token: { type: String },
     isWriter: { type: Boolean, default: false },
     isVolunteer: { type: Boolean, default: false },
     bio: { type: String, maxlength: 2000, trim: true },
     photo: { data: Buffer, contentType: String },
     location: String,
-    followers: { type: Number, default: 0 },
+    noOfFollowers: { type: Number, default: 0 },
+    followers: [
+        { type: ObjectId, ref: 'User' }
+    ],
     acceptDonation: { type: Boolean, default: false },
     startedWriting: Date,
     books: [

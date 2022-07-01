@@ -121,27 +121,29 @@ app.post('/api/register/new_writer', async (req, res) => {
             res.status(400).send(
                 { error: 'You are not eligible to become a KiddiePad writer. Must be less than 18 years.' }
             );
-        }
-        const { bio, location } = req.body;
-        if (!bio || !location) {
-            res.status(409).send(
-                { error: "Both user's bio and location are required." }
-            );
-        }
-        user.isWriter = true;
-        user.bio = bio;
-        user.location = location;
-        user.startedWriting = Date();
-
-        user.save((err, updatedUser) => {
-            if (err) {
-                res.status(500).send(
-                    { error: 'Could not create writer; Try again.' }
+        } else {
+            const { bio, location } = req.body;
+            if (!bio || !location) {
+                res.status(409).send(
+                    { error: "Both user's bio and location are required." }
                 );
             } else {
-                res.send(updatedUser);
+                user.isWriter = true;
+                user.bio = bio;
+                user.location = location;
+                user.startedWriting = Date();
+
+                user.save((err, updatedUser) => {
+                    if (err) {
+                        res.status(500).send(
+                            { error: 'Could not create writer; Try again.' }
+                        );
+                    } else {
+                        res.send(updatedUser);
+                    }
+                });
             }
-        });
+        }
     } else if (user && user.isWriter) {
         res.status(400).send(
             { error: 'User is already a writer.' }
@@ -355,15 +357,15 @@ app.get('/api/books/:bookId/read', (req, res) => {
                 );
             } else {
                 book.published ?
-                res.send({
-                    noOfChapters: book.noOfChapters,
-                    chapters: book.chapters,
-                    title: book.title,
-                    author: book.authorId.username
-                }) :
-                res.status(400).send(
-                    {error: 'This book has not been published, hence cannot be read.'}
-                );
+                    res.send({
+                        noOfChapters: book.noOfChapters,
+                        chapters: book.chapters,
+                        title: book.title,
+                        author: book.authorId.username
+                    }) :
+                    res.status(400).send(
+                        { error: 'This book has not been published, hence cannot be read.' }
+                    );
             }
         });
 });
@@ -465,18 +467,18 @@ app.put('/api/chapters/:chapterId/update', (req, res) => {
 
     if (!content) {
         res.status(400).send(
-            {error: 'content to update chapter is needed.'}
+            { error: 'content to update chapter is needed.' }
         );
     } else {
         Chapter.findOne({ _id: chapterId }, (err, chapter) => {
             if (err) {
                 res.status(400).send(
-                    {error: 'Could not update chapter with new content.'}
+                    { error: 'Could not update chapter with new content.' }
                 );
             } else {
                 if (chapter.body === content) {
                     res.status(400).send(
-                        {error: 'content is the same as the chapter body.'}
+                        { error: 'content is the same as the chapter body.' }
                     );
                 } else {
                     chapter.body = content;
@@ -484,7 +486,7 @@ app.put('/api/chapters/:chapterId/update', (req, res) => {
                     chapter.save((err, updatedChapter) => {
                         if (err) {
                             res.status(500).send(
-                                {error: `Could not save changes on chapter ${chapter.number}.`}
+                                { error: `Could not save changes on chapter ${chapter.number}.` }
                             );
                         } else {
                             res.send(updatedChapter);
@@ -499,22 +501,22 @@ app.put('/api/chapters/:chapterId/update', (req, res) => {
 // review a book
 app.post('/api/reviews/create_new', (req, res) => {
     const { userId, bookId, rating, comment } = req.body;
-    
+
     User.findOne({ _id: userId }, (err, user) => {
         if (err) {
             res.status(404).send(
-                {error: 'Could not find user with given id.'}
+                { error: 'Could not find user with given id.' }
             );
         } else {
             Book.findOne({ _id: bookId }, (err, book) => {
                 if (err) {
                     res.status(404).send(
-                        {error: 'Could not find book with given id.'}
+                        { error: 'Could not find book with given id.' }
                     );
                 } else {
                     if (!rating && !comment) {
                         res.status(400).send(
-                            {error: 'rating or comment is needed.'}
+                            { error: 'rating or comment is needed.' }
                         );
                     } else {
                         Review.create({
@@ -525,19 +527,67 @@ app.post('/api/reviews/create_new', (req, res) => {
                         }, (err, newReview) => {
                             if (err) {
                                 res.status(500).send(
-                                    {error: 'Could not create new review at the moment, try again.'}
+                                    { error: 'Could not create new review at the moment, try again.' }
                                 );
                             } else {
                                 book.reviews.push(newReview._id);
                                 book.save((err) => {
                                     if (err) {
                                         res.status(500).send(
-                                            {error: 'Could not update book with changes'}
+                                            { error: 'Could not update book with changes' }
                                         );
                                     } else {
                                         res.send(newReview);
                                     }
                                 });
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
+});
+
+// (un)follow writer endpoint
+app.put('/api/users/:userId/follow/:writerId', (req, res) => {
+    const { userId, writerId } = req.params;
+
+    User.findOne({ _id: userId }, (err, user) => {
+        if (err) {
+            res.status(404).send(
+                { error: 'User with given id not found.' }
+            );
+        } else {
+            User.findOne({ _id: writerId, isWriter: true }, (err, writer) => {
+                if (err) {
+                    res.status(404).send(
+                        { error: 'Writer with given id not found.' }
+                    );
+                } else {
+                    if (!writer) {
+                        res.status(404).send(
+                            {error: 'User with given id is not a writer'}
+                        );
+                    } else {
+                        const fIdx = writer.followers.indexOf(user._id);
+    
+                        if (fIdx === -1) {
+                            writer.followers.push(user._id);
+                            writer.noOfFollowers += 1;
+    
+                        } else {
+                            writer.followers.splice(fIdx, 1);
+                            writer.noOfFollowers -= 1;
+                        }
+    
+                        writer.save((err) => {
+                            if (err) {
+                                res.status(500).send(
+                                    { error: 'Could not save changes at the moment, try again.' }
+                                );
+                            } else {
+                                res.send(writer);
                             }
                         });
                     }
