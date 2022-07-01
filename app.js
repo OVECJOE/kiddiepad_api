@@ -165,45 +165,51 @@ app.post('/api/books/create_new', (req, res) => {
                 { error: 'Could not find user.' }
             );
         } else {
-            if (!user.isWriter) {
-                res.status(400).send(
-                    { error: 'User is not a registered kiddiepad writer.' }
+            if (!user) {
+                res.status(404).send(
+                    { error: 'Could not find user.' }
                 );
             } else {
-                if (!(title && category && desc && audience)) {
+                if (!user.isWriter) {
                     res.status(400).send(
-                        {
-                            error: `title, category, desc, and audience are
-                        necessary for book creation.`}
+                        { error: 'User is not a registered kiddiepad writer.' }
                     );
                 } else {
-                    Book.create({
-                        title,
-                        category,
-                        desc,
-                        audience,
-                        authorId
-                    }, (err, book) => {
-                        if (err) {
-                            res.status(404).send(
-                                {
-                                    error: `Could not create book; Check that book with
-                                the same title does not already exist.` }
-                            );
-                        } else {
-                            User.updateOne({ _id: authorId },
-                                { $addToSet: { books: book._id } },
-                                (err, _) => {
-                                    if (err) {
-                                        res.status(400).send(
-                                            { error: 'User could not be updated, though book has been created.' }
-                                        );
-                                    } else {
-                                        res.send(book);
-                                    }
-                                });
-                        }
-                    });
+                    if (!(title && category && desc && audience)) {
+                        res.status(400).send(
+                            {
+                                error: `title, category, desc, and audience are
+                            necessary for book creation.`}
+                        );
+                    } else {
+                        Book.create({
+                            title,
+                            category,
+                            desc,
+                            audience,
+                            authorId
+                        }, (err, book) => {
+                            if (err) {
+                                res.status(404).send(
+                                    {
+                                        error: `Could not create book; Check that book with
+                                    the same title does not already exist.` }
+                                );
+                            } else {
+                                User.updateOne({ _id: authorId },
+                                    { $addToSet: { books: book._id } },
+                                    (err, _) => {
+                                        if (err) {
+                                            res.status(400).send(
+                                                { error: 'User could not be updated, though book has been created.' }
+                                            );
+                                        } else {
+                                            res.send(book);
+                                        }
+                                    });
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -567,20 +573,20 @@ app.put('/api/users/:userId/follow/:writerId', (req, res) => {
                 } else {
                     if (!writer) {
                         res.status(404).send(
-                            {error: 'User with given id is not a writer'}
+                            { error: 'User with given id is not a writer' }
                         );
                     } else {
                         const fIdx = writer.followers.indexOf(user._id);
-    
+
                         if (fIdx === -1) {
                             writer.followers.push(user._id);
                             writer.noOfFollowers += 1;
-    
+
                         } else {
                             writer.followers.splice(fIdx, 1);
                             writer.noOfFollowers -= 1;
                         }
-    
+
                         writer.save((err) => {
                             if (err) {
                                 res.status(500).send(
@@ -604,23 +610,23 @@ app.delete('/api/users/:userId/delete', (req, res) => {
     User.findOne({ _id: userId }, (err, user) => {
         if (err) {
             res.status(404).send(
-                {error: 'User with given id not found.'}
+                { error: 'User with given id not found.' }
             );
         } else {
             if (!user) {
                 res.status(404).send(
-                    {error: 'User with given id not found.'}
+                    { error: 'User with given id not found.' }
                 );
             } else {
                 if (user.isWriter) {
                     res.status(400).send(
-                        {error: 'Could delete a writer.'}
+                        { error: 'Could delete a writer.' }
                     );
                 } else {
                     User.deleteOne({ _id: userId }, (err) => {
                         if (err) {
                             res.status(500).send(
-                                {error: 'Could not delete user at the moment.'}
+                                { error: 'Could not delete user at the moment.' }
                             );
                         } else {
                             res.send(user);
@@ -630,6 +636,37 @@ app.delete('/api/users/:userId/delete', (req, res) => {
             }
         }
     });
+});
+
+// share/view book endpoint.
+// This endpoint is just used to increment a published book `shares`/`views` field.
+// Useful when using your frontend logic to share a book.
+app.put('/api/books/:bookId/:shareOrView', (req, res) => {
+    const { bookId, shareOrView } = req.params;
+
+    if (shareOrView === 'view' || shareOrView === 'share') {
+        Book.findOneAndUpdate({ _id: bookId, published: true },
+            { $inc: { [`${shareOrView}s`]: 1 } }, { new: true },
+            (err, book) => {
+                if (err) {
+                    res.status(500).send(
+                        { error: 'Could not update number of views.' }
+                    );
+                } else {
+                    if (!book) {
+                        res.status(404).send(
+                            { error: 'Book with given id not found. Note that book must be published.' }
+                        );
+                    } else {
+                        res.send(book);
+                    }
+                }
+            });
+    } else {
+        res.status(400).send(
+            { error: "shareOrView not in ['share', 'view']" }
+        );
+    }
 });
 
 // for non-available endpoints or routes
