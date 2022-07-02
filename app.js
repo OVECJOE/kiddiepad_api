@@ -3,16 +3,19 @@ require("./config/database").connect();
 const express = require("express");
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const stripe = require('stripe')(process.env.STRIPE_PRIVATE_KEY);
+
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
 // Importing the models
 const User = require('./model/user');
+const Donator = require('./model/donator');
 const Book = require('./model/book');
 const Chapter = require('./model/chapter');
 const Review = require('./model/review');
 const auth = require('./middleware/auth');
-const computeAge = require('./utils');
+const computeAge = require('./utils').default;
 
 const app = express();
 
@@ -667,6 +670,81 @@ app.put('/api/books/:bookId/:shareOrView', (req, res) => {
             { error: "shareOrView not in ['share', 'view']" }
         );
     }
+});
+
+app.post('/api/users/:userId/donate', (req, res) => {
+    const { userId } = req.params;
+    const { amount, type } = req.body;
+
+    (type === 'project' || type === 'writer') ?
+        User.findOne({ _id: userId }, (err, user) => {
+            if (err) {
+                res.status(500).send(
+                    { error: 'Could not find user at the moment, try again.' }
+                );
+            } else {
+                if (!user) {
+                    res.status(404).send(
+                        { error: 'User with given id not found.' }
+                    );
+                } else {
+                    Donator.findOneAndUpdate({ userId }, {
+                        $inc: { totalDonations: amount },
+                        $addToSet: {
+                            history: {
+                                type, amount, timestamp: Date()
+                            }
+                        }
+                    }, { new: true }, (err, donator) => {
+                        if (err) {
+                            res.status(500).send(
+                                { error: 'Failed to update/create donator, check that amount param was passed.' }
+                            );
+                        } else {
+                            let donor;
+
+                            if (donator) {
+                                donor = donator;
+                            } else {
+                                Donator.create({
+                                    userId: user._id,
+                                    history: [
+                                        { type, amount, timestamp: Date() },
+                                    ],
+                                    totalDonations: amount
+                                }, (err, newDonator) => {
+                                    if (err) {
+                                        res.status(500).send(
+                                            { error: err.message }
+                                        );
+                                    } else {
+                                        donor = newDonator;
+                                    }
+                                });
+                            }
+
+                            if (donor) {
+                                if (type === 'project') {
+                                    res.send({
+                                        success: true,
+                                        url: process.env.PROJECT_DONATION_LINK,
+                                        donator: donor
+                                    });
+                                } else {
+                                    res.send({
+                                        success: true,
+                                        message: 'Feature coming soon',
+                                        donator: donor
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }) : res.status(400).send(
+            { error: "type parameter must be in ['project', 'writer']" }
+        )
 });
 
 // for non-available endpoints or routes
