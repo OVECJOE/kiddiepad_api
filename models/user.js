@@ -23,6 +23,7 @@ const user = new Schema({
     password: { type: String, required: true, trim: true },
     isWriter: { type: Boolean, default: false },
     isVolunteer: { type: Boolean, default: false },
+    isDonator: { type: Boolean, default: false },
     bio: { type: String, maxlength: 2000, trim: true },
     photo: { data: Buffer, contentType: String },
     location: String,
