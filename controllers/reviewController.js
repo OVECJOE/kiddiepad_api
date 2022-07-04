@@ -57,7 +57,7 @@ exports.delete_review = (req, res) => {
 
     Review.findOneAndDelete({ _id: reviewId }, (err, review) => {
         if (err) {
-            res.status(500).send(
+            res.status(400).send(
                 { error: 'Could not delete review, check that review id is correct.' }
             );
         } else {

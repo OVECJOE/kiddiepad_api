@@ -319,6 +319,349 @@ paths:
           description: "Could not create book; Check that book with the same title does not already exist."
         "500":
           description: "Could not find user."
+  /books/{title}:
+    get:
+      tags:
+        - "Book"
+      summary: "Find book by title"
+      description: "Returns a single book"
+      operationId: "getBookByTitle"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "title"
+          in: path
+          description: "The title of the book to return"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Book"
+        "404":
+          description: "Book with given title not found."
+        "500":
+          description: "Could not fetch book."
+      security:
+        - apiKey: [write, read]
+
+  /books/{keyword}/search:
+    get:
+      tags:
+        - "Book"
+      summary: "Find books by keyword"
+      description: "Returns a list of book"
+      operationId: "getBooksByKeyword"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "keyword"
+          in: path
+          description: "The keyword to search books by"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            type: object
+            description: "Contains the length of books list returned and the list of books"
+            properties:
+              length:
+                type: integer
+                default: 0
+              result:
+                type: array
+                items:
+                  $ref: "#/definitions/Book"
+        "400":
+          description: "Search keyword required to lookup books."
+        "500":
+          description: "Could not get books at the moment, try again."
+      security:
+        - apiKey: [write, read]
+  /books/{bookId}/delete:
+    delete:
+      tags:
+        - "Book"
+      summary: "Delete a book by ID"
+      description: "Note that a published book cannot be deleted."
+      operationId: "deleteBook"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "bookId"
+          in: path
+          description: "The ID of the book to be deleted"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Book"
+        "400":
+          description: "Changes could not be made to user at the moment."
+        "404":
+          description: "Book with given id does not exist"
+        "500":
+          description: "Could not delete chapters associated with book."
+      security:
+        - apiKey: [write, read]
+  /books/{bookId}/publish:
+    put:
+      tags:
+        - "Book"
+      summary: "Publish the book with given id"
+      description: "Set the published field of a book to true"
+      operationId: "publishBook"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "bookId"
+          in: path
+          description: "The id of the book to be published"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Book"
+        "404":
+          description: "Book with given id not found."
+        "500":
+          description: "Could not save requested changes on book."
+      security:
+        - apiKey: [write, read]
+  /books/{bookId}/read:
+    get:
+      tags:
+        - "Book"
+      summary: "returns a book chapters for readers to read"
+      operationId: "readBook"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "bookId"
+          in: path
+          description: "The id of the book to be published"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            type: object
+            description: "Some info along with the chapters"
+            properties: 
+              noOfChapters:
+                type: integer
+                default: 0
+              chapters:
+                type: array
+                items: 
+                  $ref: "#/definitions/Chapter"
+              title:
+                type: string
+              author:
+                type: string
+      security:
+        - apiKey: [write, read]
+      
+  /books/{bookId}/{shareOrView}:
+    put:
+      tags:
+        - "Book"
+      summary: "returns the modified book"
+      description: "Returns the result of incrementing the number of shares or views of the book with given id"
+      operationId: "shareOrViewBook"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "bookId"
+          in: path
+          description: "The id of the book whose shares or views field is to be modified"
+          required: true
+          type: string
+        - name: "shareOrView"
+          in: path
+          description: "Must be either the value 'share' or 'view'"
+          required: true
+          type: string
+          enum:
+            - view
+            - share
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Book"
+        "400":
+          description: "shareOrView not in ['share', 'view']"
+        "404":
+          description: "Book with given id not found. Note that book must be published."
+        "500":
+          description: "Could not update number of {shares}/{views}."
+      security:
+        - apiKey: [write, read]
+  /books/{bookId}/chapters/create_new:
+    post:
+      tags:
+        - "Chapter"
+      summary: "create a new chapter within a book"
+      operationId: "createChapter"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "bookId"
+          in: path
+          required: true
+          description: "The id of the book that chapter is to be created for."
+          type: string
+        - in: body
+          name: body
+          description: "body is required, but title is not"
+          schema:
+            type: object
+            description: "The title and body of the newly created chapter"
+            properties: 
+              title:
+                type: string
+                maxLength: 255
+              body:
+                type: string
+                required: true
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Chapter"
+        "400":
+          description: "Could not find book; Check that book id is valid."
+        "403":
+          description: "chapter body must be provided."
+        "404":
+          description: "Book not found."
+        "405":
+          description: "valid parameters are title and body."
+        "500":
+          description: "Could not save new chapter; Check that chapter title or body is not duplicated."
+      security:
+        - apiKey: [write, read]
+  /book/chapters/{chapterId}/delete:
+    delete:
+      tags:
+        - "Chapter"
+      description: "Please note that not all responses stated throughout the API docs are exactly correct"
+      summary: "delete a chapter and its record from the associated book"
+      operationId: "deleteChapter"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "chapterId"
+          in: path
+          description: "The id of the chapter to be deleted"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Chapter"
+        "404":
+          description: "Chapter with given id does not exist."
+        "500":
+          description: "Could save changes made to the book."
+      security:
+        - apiKey: [write, read]
+  /book/chapters/{chapterId}/update:
+    put:
+      tags:
+        - "Chapter"
+      summary: "updates the content of a chapter whose id was provided"
+      operationId: "updateChapter"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "chapterId"
+          in: path
+          description: "The id of the chapter to be updated"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Chapter"
+        "400":
+          description: "content to update chapter is needed."
+        "417":
+          description: "content is the same as the chapter body."
+        "500":
+          description: "Could not update chapter with new content."
+      security:
+        - apiKey: [write, read]
+  /reviews/create_new:
+    post:
+      tags:
+        - "Review"
+      summary: "create a review for a book"
+      operationId: "createReview"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: "body"
+          required: true
+          description: "The data that will be required to create a review"
+          schema:
+            $ref: "#/definitions/Review"
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Review"
+        "400":
+          description: "rating or comment is needed."
+        "404":
+          description: "Could not find user with given id."
+        "500":
+          description: "Could not create new review at the moment, try again."
+      security:
+        - apiKey: [write, read]
+  /reviews/{reviewId}/delete:
+    delete:
+      tags:
+        - "Review"
+      summary: "delete a book review"
+      operationId: "deleteReview"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "reviewId"
+          in: path
+          description: "The id of the review to be deleted"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Review"
+        "400":
+          description: "Could not delete review, check that review id is correct."
+        "404":
+          description: "Could not find review with given id."
+        "500":
+          description: "Could not update book with changes."
+      security:
+        - apiKey: [write, read]
 
 definitions:
   User:
@@ -339,8 +682,11 @@ definitions:
         format: "date"
       email:
         type: "string"
+        pattern: '/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/'
       password:
         type: "string"
+        format: password
+        writeOnly: true
       isWriter:
         type: boolean
         default: false
@@ -450,7 +796,6 @@ definitions:
         required: true
       number:
         type: integer
-        required: true
         default: 1
       noOfPages:
         type: integer
@@ -473,6 +818,7 @@ definitions:
         format: float
         minimum: 0
         maximum: 5
+        default: 0
         required: true
       comment:
         type: string
@@ -483,3 +829,4 @@ definitions:
       votes:
         type: integer
         default: 0
+        readOnly: true

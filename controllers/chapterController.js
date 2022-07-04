@@ -2,14 +2,14 @@ const Book = require('../models/book');
 const Chapter = require('../models/chapter');
 
 exports.create_chapter = (req, res) => {
-    Book.findOne({ _id: req.body.bookId }, (err, book) => {
+    Book.findOne({ _id: req.params.bookId }, (err, book) => {
         if (err) {
-            res.status(404).send(
+            res.status(400).send(
                 { error: 'Could not find book; Check that book id is valid.' }
             );
         } else {
             if (!req.body.body) {
-                res.status(404).send(
+                res.status(403).send(
                     { error: 'chapter body must be provided.' }
                 );
             } else if (!book) {
@@ -17,19 +17,25 @@ exports.create_chapter = (req, res) => {
                     { error: 'Book not found.' }
                 );
             } else {
+                if (Object.keys(req.body).length > 2) {
+                    res.status(405).send(
+                        { error: 'valid parameters are title and body.' }
+                    );
+                    return;
+                }
                 Chapter.create({
                     ...req.body,
+                    bookId: req.params.bookId,
                     number: book.chapters.length + 1,
                     noOfPages: Math.ceil(req.body.body.length / 500)
                 }, (err, newChapter) => {
                     if (err) {
                         res.status(500).send(
                             {
-                                error: `Could not save new chapter; Check that chapter
-                             title or body is not duplicated.` }
+                                error: 'Check that chapter title or body is not duplicated.' }
                         );
                     } else {
-                        Book.updateOne({ _id: req.body.bookId },
+                        Book.updateOne({ _id: req.params.bookId },
                             {
                                 noOfChapters: book.chapters.length + 1,
                                 $addToSet: { chapters: newChapter._id }
@@ -62,7 +68,7 @@ exports.delete_chapter = (req, res) => {
         } else {
             if (!chapter || !chapter.bookId) {
                 res.status(404).send(
-                    { error: 'Chapter with given id does not exists.' }
+                    { error: 'Chapter with given id does not exist.' }
                 );
             } else {
                 Book.findOne({ _id: chapter.bookId }, (err, book) => {
@@ -100,12 +106,12 @@ exports.update_chapter = (req, res) => {
     } else {
         Chapter.findOne({ _id: chapterId }, (err, chapter) => {
             if (err) {
-                res.status(400).send(
+                res.status(500).send(
                     { error: 'Could not update chapter with new content.' }
                 );
             } else {
                 if (chapter.body === content) {
-                    res.status(400).send(
+                    res.status(417).send(
                         { error: 'content is the same as the chapter body.' }
                     );
                 } else {

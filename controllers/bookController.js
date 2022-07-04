@@ -24,11 +24,12 @@ exports.create_book = (req, res) => {
                     if (!(title && category && desc && audience)) {
                         res.status(401).send(
                             {
-                                error: 'title, category, desc, and audience required.'}
+                                error: 'title, category, desc, and audience required.'
+                            }
                         );
                     } else {
                         Book.create({
-                            title,
+                            title: title.toLowerCase(),
                             category,
                             desc,
                             audience,
@@ -63,7 +64,11 @@ exports.create_book = (req, res) => {
 
 // search book by title
 exports.search_book = (req, res) => {
-    const bookTitle = req.params.title;
+    let bookTitle = req.params.title;
+
+    if (bookTitle) {
+        bookTitle = bookTitle.toLowerCase();
+    }
 
     Book.findOne({ title: bookTitle })
         .populate({ path: 'chapters', model: 'Chapter' })
@@ -74,7 +79,13 @@ exports.search_book = (req, res) => {
                     { error: 'Could not fetch book.' }
                 )
             } else {
-                res.send(book);
+                if (book) {
+                    res.send(book);
+                } else {
+                    res.status(404).send(
+                        { error: 'Book with given title not found.' }
+                    );
+                }
             }
         });
 };
@@ -94,6 +105,8 @@ exports.search_books = (req, res) => {
                 { desc: { $regex: keyword, $options: 'i' } }
             ]
         }).populate('authorId')
+            .populate({ path: 'chapters', model: 'Chapter' })
+            .populate({ path: 'reviews', model: 'Review' })
             .exec((err, books) => {
                 if (err) {
                     res.status(500).send(
@@ -131,7 +144,7 @@ exports.delete_book = (req, res) => {
                     ) :
                     User.findOne({ _id: book.authorId }, (err, user) => {
                         if (err) {
-                            res.status(404).send(
+                            res.status(400).send(
                                 { error: 'Changes could not be made to user at the moment.' }
                             );
                         } else {
@@ -139,7 +152,7 @@ exports.delete_book = (req, res) => {
                             user.books = books;
                             user.save((err, user) => {
                                 if (err) {
-                                    res.status(500).send(
+                                    res.status(400).send(
                                         { error: 'Could not save changes to user at the moment.' }
                                     );
                                 } else {
@@ -174,7 +187,7 @@ exports.publish_book = (req, res) => {
 
     Book.findOne({ _id: bookId }, (err, book) => {
         if (err) {
-            res.status(500).send(
+            res.status(404).send(
                 { error: 'Book with given id not found.' }
             );
         } else {

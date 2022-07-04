@@ -29,7 +29,7 @@ router.get('/books/:bookId/read', bookController.read_book);
 router.put('/books/:bookId/:shareOrView', bookController.incr_book_shares_or_views);
 
 // create new chapter endpoint
-router.post('/book/chapters/create_new', chapterController.create_chapter);
+router.post('/books/:bookId/chapters/create_new', chapterController.create_chapter);
 
 // delete a given chapter using the chapter id endpoint
 router.delete('/book/chapters/:chapterId/delete', chapterController.delete_chapter);
