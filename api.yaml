@@ -11,7 +11,7 @@ info:
     url: https://github.com/OVECJOE
     email: ovecjoe123@gmail.com
 
-host: "localhost:3000"
+host: "kiddiepad-api.herokuapp.com"
 basePath: "/api/v1"
 tags:
   - name: "User"
