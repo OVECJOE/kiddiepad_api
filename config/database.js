@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 exports.connect = () => {
   // Connecting to the database
-  mongoose.connect(process.env.DATABASE_URL || 'mongodb://localhost/kiddiepad')
+  mongoose.connect(process.env.DATABASE_URI)
     .then(() => {
       console.log("Successfully connected to database");
     })
