@@ -47,7 +47,7 @@ exports.register_user = async (req, res) => {
 
         user.token = token;
 
-        res.send(user);
+        res.status(201).send(user);
 
     } catch (err) {
         res.status(500).send(
@@ -81,7 +81,7 @@ exports.login_user = async (req, res) => {
 
             res.send(user);
         } else {
-            res.status(400).send(
+            res.status(406).send(
                 { error: 'Invalid Credentials' }
             );
         }
@@ -93,35 +93,39 @@ exports.login_user = async (req, res) => {
 };
 
 exports.get_users = (req, res) => {
-    User.find({}, (err, users) => {
-        if (err) {
-            res.status(500).send(
-                {error: 'Could not get the list of users.'}
-            );
-        } else {
-            res.send(users);
-        }
-    });
+    User.find({}).populate({ path: 'books', model: 'Book' })
+        .populate({ path: 'followers', model: 'User' })
+        .exec((err, users) => {
+            if (err) {
+                res.status(500).send(
+                    { error: 'Could not get the list of users.' }
+                );
+            } else {
+                res.send(users);
+            }
+        });
 };
 
 exports.get_user_details = (req, res) => {
     const { userId } = req.params;
 
-    User.findOne({ _id: userId }, (err, user) => {
-        if (err) {
-            res.status(500).send(
-                {error: 'Could not get the user details.'}
-            );
-        } else {
-            if (!user) {
-                res.status(404).send(
-                    {error: 'User with given id not found.'}
+    User.findOne({ _id: userId }).populate({ path: 'books', model: 'Book' })
+        .populate({ path: 'followers', model: 'User' })
+        .exec((err, user) => {
+            if (err) {
+                res.status(500).send(
+                    { error: "Could not get user's details." }
                 );
             } else {
-                res.send(user);
+                if (user) {
+                    res.send(user);
+                } else {
+                    res.status(404).send(
+                        { error: 'User with given id not found.' }
+                    );
+                }
             }
-        }
-    });
+        });
 };
 
 exports.delete_non_writer = (req, res) => {
@@ -161,6 +165,13 @@ exports.delete_non_writer = (req, res) => {
 exports.follow_or_unfollow_writer = (req, res) => {
     const { userId, writerId } = req.params;
 
+    if (userId === writerId) {
+        res.status(405).send(
+            {error: 'User cannot follow self.'}
+        );
+        return;
+    }
+
     User.findOne({ _id: userId }, (err, user) => {
         if (err) {
             res.status(404).send(
@@ -174,7 +185,7 @@ exports.follow_or_unfollow_writer = (req, res) => {
                     );
                 } else {
                     if (!writer) {
-                        res.status(404).send(
+                        res.status(400).send(
                             { error: 'User with given id is not a writer' }
                         );
                     } else {

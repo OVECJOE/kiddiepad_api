@@ -12,17 +12,17 @@ exports.create_book = (req, res) => {
             );
         } else {
             if (!user) {
-                res.status(404).send(
+                res.status(500).send(
                     { error: 'Could not find user.' }
                 );
             } else {
                 if (!user.isWriter) {
-                    res.status(400).send(
+                    res.status(403).send(
                         { error: 'User is not a registered kiddiepad writer.' }
                     );
                 } else {
                     if (!(title && category && desc && audience)) {
-                        res.status(400).send(
+                        res.status(401).send(
                             {
                                 error: 'title, category, desc, and audience required.'}
                         );

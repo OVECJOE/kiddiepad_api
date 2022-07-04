@@ -29,13 +29,13 @@ exports.become_writer = async (req, res) => {
                             { error: 'Could not create writer; Try again.' }
                         );
                     } else {
-                        res.send(updatedUser);
+                        res.status(204).send(updatedUser);
                     }
                 });
             }
         }
     } else if (user && user.isWriter) {
-        res.status(400).send(
+        res.status(403).send(
             { error: 'User is already a writer.' }
         );
     } else {

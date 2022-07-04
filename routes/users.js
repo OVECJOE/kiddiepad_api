@@ -21,13 +21,13 @@ router.get('/users/:userId', userController.get_user_details);
 router.delete('/users/:userId/delete', userController.delete_non_writer);
 
 // become writer endpoint
-router.post('/register/new_writer', writerController.become_writer);
+router.put('/register/new_writer', writerController.become_writer);
 
 // get all writers endpoint
-router.get('/users/writers', writerController.get_writers);
+router.get('/writers', writerController.get_writers);
 
 // get writer's details endpoint
-router.get('/users/writers/:writerId', writerController.get_writer_details);
+router.get('/writers/:writerId', writerController.get_writer_details);
 
 // (un)follow writer endpoint
 router.put('/users/:userId/follow/:writerId',

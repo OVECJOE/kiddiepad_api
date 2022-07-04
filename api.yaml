@@ -1,0 +1,485 @@
+swagger: "2.0"
+info:
+  title: "KiddiePad API Docs"
+  version: 1.0.0
+  description: "This API was created to power the frontend of KiddiePad web application and must be used for such. It exposes powerful endpoints that interacts with a mongodb database in complex ways to perform advanced CRUD operations."
+  license:
+    name: MIT
+    url: https://spdx.org/licenses/MIT.html
+  contact:
+    name: KiddiePad
+    url: https://github.com/OVECJOE
+    email: ovecjoe123@gmail.com
+
+host: "localhost:3000"
+basePath: "/api/v1"
+tags:
+  - name: "User"
+    description: "Operations about user. Note that every KiddiePad user is a reader."
+  - name: "Writer"
+    description: "Operations about writer - the 'less-than-18' user that is a valid KiddiePad writer."
+  - name: "Book"
+    description: "Operations about book - the e-contents created by young writers."
+  - name: "Chapter"
+    description: "Operations about chapter. Each chapter is associated with a book."
+  - name: "Review"
+    description: "Operations about review. Each book can be made up of several reviews."
+  - name: "Donator"
+    description: "Operations about donator. A donator document is created during first donation."
+
+schemes:
+  - "http"
+  - "https"
+
+paths:
+  /register:
+    post:
+      tags:
+        - "User"
+      summary: "Create new KiddiePad user"
+      operationId: "registerUser"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: "body"
+          description: "User object that needs to be created in the database"
+          required: true
+          schema:
+            $ref: "#/definitions/User"
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "All input is required"
+        "409":
+          description: "User already exist. Please Login!"
+        "500":
+          description: "Cannot register user at the moment, try again later."
+      security:
+        - apiKey: [write, read]
+  /login:
+    post:
+      tags:
+        - "User"
+      summary: "Login existing KiddiePad user"
+      operationId: "loginUser"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: body
+          required: true
+          description: "Needs email and password to login in"
+          schema:
+            required:
+              - "email"
+              - "password"
+            properties:
+              email:
+                type: "string"
+                example: "abcd1234@gmail.com"
+              password:
+                type: "string"
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "All input is required"
+        "406":
+          description: "Invalid Credentials"
+      security:
+        - apiKey: [write, read]
+  /users:
+    get:
+      tags:
+        - "User"
+      summary: "Get all KiddiePad users"
+      operationId: "getUsers"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/User"
+        "500":
+          description: "Could not get the list of users."
+      security:
+        - apiKey: [write, read]
+  /users/{userId}:
+    get:
+      tags:
+        - "User"
+      summary: "Find a KiddiePad user by id"
+      operationId: "getUserById"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "userId"
+          in: path
+          description: "User Id to filter by"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "404":
+          description: "User with given id not found."
+      security:
+        - apiKey: [write, read]
+  /users/{userId}/delete:
+    delete:
+      tags:
+        - "User"
+      summary: Delete a KiddiePad user if isWriter = false
+      operationId: "deleteUserById"
+      produces:
+        - "application/json"
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "User deleted successfully."
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "Could delete a writer."
+        "404":
+          description: "User with given id not found."
+        "500":
+          description: "Could not delete user at the moment."
+      security:
+        - apiKey: [write, read]
+  /users/{userId}/follow/{writerId}:
+    put:
+      tags:
+        - "User"
+      summary: "Follow a KiddiePad writer"
+      description: "Please do note that a KiddiePad writer is still a user, and can also follow other writers."
+      operationId: "followWriter"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "userId"
+          in: "path"
+          required: true
+          type: string
+        - name: "writerId"
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "User is now following writer."
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "User with given id is not a writer"
+        "404":
+          description: "User/Writer with given id not found."
+        "500":
+          description: "Could not save changes at the moment, try again."
+      security:
+        - apiKey: [writer, read]
+  /register/new_writer:
+    put:
+      tags:
+        - "Writer"
+      summary: "Become a KiddiePad writer"
+      description: "Must be less than 18 years old in order to be a writer."
+      operationId: "becomeWriter"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: body
+          required: true
+          description: "email, bio, and location are required"
+          schema:
+            required:
+              - "email"
+              - "bio"
+              - "location"
+            properties:
+              email:
+                type: string
+                description: "Must be a valid email and the one used during sign up"
+              bio:
+                type: string
+                description: "This helps the readers know more about the writer."
+                maxLength: 2000
+              location:
+                type: string
+                description: "The writer's home address"
+      responses:
+        "204":
+          description: "User has successfully become a writer."
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "You are not eligible to become a KiddiePad writer. Must be less than 18 years."
+        "403":
+          description: "User is already a writer."
+        "409":
+          description: "Both user's bio and location are required."
+        "500":
+          description: "Could not create writer; Try again."
+      security:
+        - apiKey: [write, read]
+  /writers:
+    get:
+      tags:
+        - "Writer"
+      summary: "Get all KiddiePad writers"
+      operationId: "getWriters"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "Successful operation."
+          schema:
+            $ref: "#/definitions/User"
+        "500":
+          description: "Could not get the list of writers."
+      security:
+        - apiKey: [write, read]
+  /writers/{writerId}:
+    get:
+      tags:
+        - "Writer"
+      summary: "Find a writer by Id"
+      operationId: "getWriterById"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "writerId"
+          in: path
+          description: "ID of the KiddiePad writer that needs to be fetched"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "404":
+          description: "Writer with given id not found."
+        "500":
+          description: "Could not get writer's details."
+      security:
+        - apiKey: [write, read]
+  /books/create_new:
+    post:
+      tags:
+        - "Book"
+      summary: "Create a new book."
+      description: "This endpoint is only viable for KiddiePad writers. To create a book as a normal user, you must become a writer"
+      operationId: "createNewBook"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: "body"
+          description: "Data required to create a new book."
+          required: true
+          schema:
+            $ref: "#/definitions/Book"
+      responses:
+        "200":
+          description: "Successful operation"
+          schema:
+            $ref: "#/definitions/Book"
+        "400":
+          description: "User could not be updated, though book has been created."
+        "401":
+          description: "title, category, desc, and audience required."
+        "403":
+          description: "User is not a registered kiddiepad writer."
+        "404":
+          description: "Could not create book; Check that book with the same title does not already exist."
+        "500":
+          description: "Could not find user."
+
+definitions:
+  User:
+    type: object
+    properties:
+      firstName:
+        type: "string"
+        maxLength: 100
+      lastName:
+        type: "string"
+        maxLength: 100
+      username:
+        type: "string"
+        description: "A user's username must be unique"
+        maxLength: 100
+      birthDate:
+        type: string
+        format: "date"
+      email:
+        type: "string"
+      password:
+        type: "string"
+      isWriter:
+        type: boolean
+        default: false
+      isVolunteer:
+        type: boolean
+        default: false
+      isDonator:
+        type: boolean
+        default: false
+      bio:
+        type: string
+        maxLength: 2000
+      photo:
+        type: string
+        format: file
+      location:
+        type: string
+      noOfFollowers:
+        type: integer
+        default: 0
+      followers:
+        type: array
+        items:
+          $ref: "#/definitions/User"
+      acceptDonation:
+        type: boolean
+        default: false
+      startedWriting:
+        type: string
+        format: date
+      books:
+        type: array
+        items:
+          $ref: "#/definitions/Book"
+    example:
+      firstName: "Kiddie"
+      lastName: "Pad"
+      username: "kiddiepad"
+      email: "kiddiepad@gmail.com"
+      birthDate: "2022-09-08"
+      password: "kiddie123"
+
+  Book:
+    type: object
+    properties:
+      title:
+        type: string
+        required: true
+        maxLength: 255
+      authorId:
+        type: string
+        required: true
+      noOfChapters:
+        type: integer
+        default: 0
+      category:
+        type: string
+        required: true
+      cover:
+        type: string
+        format: file
+      published:
+        type: boolean
+        default: false
+      desc:
+        type: string
+        required: true
+        maxLength: 3000
+      price:
+        type: number
+        format: double
+        default: 0
+      views:
+        type: integer
+        default: 0
+      shares:
+        type: integer
+        default: 0
+      audience:
+        type: string
+        required: true
+        enum:
+          - "kids"
+          - "children"
+          - "teens"
+          - "adults"
+      chapters:
+        type: array
+        items:
+          $ref: "#/definitions/Chapter"
+      reviews:
+        type: array
+        items:
+          $ref: "#/definitions/Review"
+    example:
+      title: "New book"
+      authorId: "74h474hhik2872uj22"
+      category: "action"
+      desc: "This is a new book"
+      audience: "children"
+
+  Chapter:
+    type: object
+    properties:
+      bookId:
+        type: string
+        required: true
+      number:
+        type: integer
+        required: true
+        default: 1
+      noOfPages:
+        type: integer
+        default: 1
+      title:
+        type: string
+        maxLength: 255
+      body:
+        type: string
+        required: true
+
+  Review:
+    type: object
+    properties:
+      userId:
+        type: string
+        required: true
+      ratingScore:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 5
+        required: true
+      comment:
+        type: string
+        maxLength: 500
+      bookId:
+        type: string
+        required: true
+      votes:
+        type: integer
+        default: 0

@@ -5,6 +5,11 @@ const stripe = require('stripe')(process.env.STRIPE_PRIVATE_KEY);
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
+// swagger docs imports
+const swaggerUI = require('swagger-ui-express');
+const YAML = require('yamljs');
+const swaggerJsDocs = YAML.load('./api.yaml');
+
 // Importing the middlewares
 const auth = require('./middleware/auth');
 
@@ -14,14 +19,16 @@ const booksRouter = require('./routes/books');
 
 const app = express();
 
+app.use('/api-docs', swaggerUI.serve,
+    swaggerUI.setup(swaggerJsDocs)
+);
+
 app.use(express.json({ limit: '50mb' }));
 
 // uses the users route.
 app.use('/api/v1', usersRouter);
-
 // uses the books route.
 app.use('/api/v1', booksRouter);
-
 
 // for non-available endpoints or routes
 app.use('*', (req, res) => {

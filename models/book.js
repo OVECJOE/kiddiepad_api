@@ -25,7 +25,12 @@ const book = new Schema({
     price: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
     shares: { type: Number, default: 0 },
-    audience: { type: String, required: true },
+    audience: {
+        type: String,
+        required: true,
+        enum: ['kids', 'children', 'teens', 'adults'],
+        default: 'kids'
+    },
     chapters: [
         { type: ObjectId, ref: 'Chapter' }
     ],
