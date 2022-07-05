@@ -23,13 +23,13 @@ exports.become_writer = async (req, res) => {
                 user.location = location;
                 user.startedWriting = Date();
 
-                user.save((err, updatedUser) => {
+                user.save((err) => {
                     if (err) {
                         res.status(500).send(
                             { error: 'Could not create writer; Try again.' }
                         );
                     } else {
-                        res.status(204).send(updatedUser);
+                        res.status(204).send(user);
                     }
                 });
             }
