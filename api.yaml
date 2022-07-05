@@ -29,8 +29,8 @@ tags:
     description: "Operations about donator. A donator document is created during first donation."
 
 schemes:
-  - "http"
   - "https"
+  - "http"
 
 paths:
   /register:
