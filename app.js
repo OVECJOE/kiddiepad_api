@@ -1,6 +1,7 @@
 require("dotenv").config();
 require("./config/database").connect();
 const express = require("express");
+const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_PRIVATE_KEY);
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
@@ -18,6 +19,7 @@ const usersRouter = require('./routes/users');
 const booksRouter = require('./routes/books');
 
 const app = express();
+app.use(cors());
 
 app.use('/api-docs', swaggerUI.serve,
     swaggerUI.setup(swaggerJsDocs)

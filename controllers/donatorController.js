@@ -1,3 +1,4 @@
+require("dotenv").config();
 const Donator = require('../models/donator');
 const User = require('../models/user');
 

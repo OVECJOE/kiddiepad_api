@@ -12,6 +12,7 @@ info:
     email: ovecjoe123@gmail.com
 
 host: "kiddiepad-api.herokuapp.com"
+# host: "localhost:3000"
 basePath: "/api/v1"
 tags:
   - name: "User"
@@ -682,11 +683,11 @@ definitions:
         format: "date"
       email:
         type: "string"
-        pattern: '/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/'
+        # pattern: '/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/'
       password:
         type: "string"
-        format: password
-        writeOnly: true
+        # format: password
+        # writeOnly: true
       isWriter:
         type: boolean
         default: false
