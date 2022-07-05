@@ -320,6 +320,9 @@ paths:
           description: "Could not create book; Check that book with the same title does not already exist."
         "500":
           description: "Could not find user."
+      security:
+        - apiKey: [write, read]
+      
   /books/{title}:
     get:
       tags:
