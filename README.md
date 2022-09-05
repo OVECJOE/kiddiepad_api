@@ -20,4 +20,4 @@ KiddiePad provides a platform for **youngsters** below 18 That love writing to K
 Access the project presentation slides [here](https://1drv.ms/p/s!AiTanVehGkLplBaplOlFmbbVBRDo?e=nP7irU).
 
 ## Docs
-[Link to live demo](https://kiddiepad-api.herokuapp.com/api-docs)
+[Link to API docs](https://kiddiepad-api.herokuapp.com/api-docs)
