@@ -21,11 +21,11 @@ const booksRouter = require('./routes/books');
 const app = express();
 app.use(cors());
 
-app.use('/api-docs', swaggerUI.serve,
+app.use('/', swaggerUI.serve,
     swaggerUI.setup(swaggerJsDocs)
 );
 
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '30mb' }));
 
 // uses the users route.
 app.use('/api/v1', usersRouter);
